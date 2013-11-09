@@ -6,8 +6,7 @@ Command line for a C++ automatic compiler
 
 from compile import compile
 
-def main():
-    from sys import argv
+def main(*argv):
     if len(argv) >= 2:
         try:
             compile(argv[1])
@@ -17,4 +16,5 @@ def main():
         print 'usage: {0} file.cpp'.format(*argv)
 
 if __name__ == '__main__':
-    main()
+    from sys import argv
+    main(*argv)
