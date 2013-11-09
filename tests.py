@@ -29,11 +29,6 @@ class CompileTest(unittest.TestCase):
         self.assertEqual(find_file(File('a.txt'), 'test').full, 'test/a.txt')
         self.assertRaises(IOError, find_file, File('notfound.txt'))
 
-    #def test_Include(self):
-    #    from compile import Include, File
-    #    i = Include(File('a.txt'), 4)
-    #    self.assertEqual(str(i), '<"a.txt" included in line 4>')
-
     def test_find_includes(self):
         from compile import find_includes, File
         actual = File('test/main.cpp')

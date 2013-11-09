@@ -59,16 +59,6 @@ def link_cmd(path_name, objs=[], extra=''):
     """
     return sjoin(CXX, link_extra, extra, '-o', path_name, *objs)
 
-#class Include(object):
-#    """ Container for the included file name and in which line it was """
-#    def __init__(self, file=None, line_number=0):
-#        self.file = file
-#        self.line_number = line_number
-#    
-#    def __repr__(self):
-#        return '<"{file.full}" included in line {line_number}>'.format(
-#            **self.__dict__)
-
 
 def comment_remover(text):
     def replacer(match):
@@ -165,20 +155,22 @@ def compile(source_name):
     actual = File(source_name)
     includes, sources = dependencies(actual)
 
+    print
+
     if len(sources) > 0: # Compile and link
-        sources.append(actual)
+        #sources.append(actual)
         objs = []
-        for source in sources:
+        for source in sources + [actual]:
             obj = source.path_name + '.o'
             objs.append(obj)
             print compile_cmd(obj)
-            if source != source_name:
-                pass#compile_obj(source)
+            print 'Sensibility:', [source] + source.includes + source.sources
+            print
         print link_cmd(source.path_name, objs)
 
     else: # Compile into the executable
         print link_cmd(actual.path_name, [actual.full])
-
-    print includes
+        print 'Sensibility:', [actual] + actual.includes + actual.sources
+        print
     
     
