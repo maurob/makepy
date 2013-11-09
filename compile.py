@@ -2,9 +2,13 @@
 
 """
 Compilation module
+
+TODO:
+* Comprobar que el compilador terminó correctamente
 """
 import os
 from os import system
+import re
 
 CXX = 'g++'
 source_exts = ['.cpp', '.cc', '.c']
@@ -42,13 +46,31 @@ class Include(object):
         return '<"{file_name}" included in line {line_number}>'.format(
             **self.__dict__)
 
+
+def comment_remover(text):
+    def replacer(match):
+        s = match.group(0)
+        if s.startswith('/'):
+            return ""
+        else:
+            return s
+    pattern = re.compile(
+        r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+        re.DOTALL | re.MULTILINE
+    )
+    return re.sub(pattern, replacer, text)
+
+
+
 def find_includes(file):
     """
     Return the list of included files in *file* and the line number where finded 
     *file* must be a readable Python file object
     """
     includes = []
-    for n, line in enumerate(file):
+    text = comment_remover(file.read())
+    for n, line in enumerate(text.splitlines()):
+        
         if '#include' in line:
             i = line.index('#include') + len('#include')
             part = line[i:].strip()
@@ -83,13 +105,7 @@ def find_related_sources(includes, source, path, exts=source_exts):
             
                                   
 
-        
-
-def compile(source_name):
-    """
-    Automatic compile de *source_name* file and its dependencies
-    *source_name* is a .cpp/.cc source file name
-    """
+def dependencies(source_name):
     path, filename = os.path.split(source_name)
     name, ext = os.path.splitext(filename)
 
@@ -100,17 +116,35 @@ def compile(source_name):
 
     includes = find_includes(open(filename))
     sources = set(find_related_sources(includes, filename, path))
+    if len(sources) > 0:
+        for source in list(sources)+[inc.file_name for inc in includes]:
+            inc, src = dependencies(source)
+            [sources.add(s) for s in src]
+    
+    return includes, sources
+
+def compile(source_name):
+    """
+    Automatic compile de *source_name* file and its dependencies
+    *source_name* is a .cpp/.cc source file name
+    """
+    path, filename = os.path.split(source_name)
+    name, ext = os.path.splitext(filename)
+
+    includes, sources = dependencies(source_name)
 
     if len(sources) > 0: # Compile and link
-
         sources.add(source_name)
         objs = [os.path.splitext(s)[0]+'.o' for s in sources]
         for source in sources:
             print compile_cmd(source)
+            if source != source_name:
+                pass#compile_obj(source)
         print link_cmd(name, objs, path)
 
     else: # Compile into the executable
-        pass
-        
+        print link_cmd(name, [source_name], path)
+
+    print includes
     
     
