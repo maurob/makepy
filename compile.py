@@ -6,12 +6,17 @@ Compilation module
 TODO:
 * Comprobar que el compilador terminó correctamente
 """
+__author__ = 'Mauro Bruni'
+
 import os
 from os import system
 import re
 
 CXX = 'g++'
 source_exts = ['.cpp', '.cc', '.c']
+
+compile_extra = ''
+link_extra = ''
 
 
 def noempty(it):
@@ -26,7 +31,7 @@ def sjoin(*args):
 
 def compile_cmd(path_name, extra=''):
     """ Return the command line for creating a `.o` from a `.cpp` """
-    return sjoin(CXX, extra, '-c', path_name)
+    return sjoin(CXX, compile_extra, extra, '-c', path_name)
 
 
 def link_cmd(name, objs=[], path='', extra=''):
@@ -34,7 +39,7 @@ def link_cmd(name, objs=[], path='', extra=''):
     Return the command line for creating a executable from the `.o` file list
     """
     path_name = os.path.join(path, name)
-    return sjoin(CXX, extra, '-o', path_name, *objs)
+    return sjoin(CXX, link_extra, extra, '-o', path_name, *objs)
 
 class Include(object):
     """ Container for the included file name and in which line it was """
