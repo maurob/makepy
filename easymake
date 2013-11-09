@@ -1,15 +1,17 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
-Command line for a C++ automatic compiler
+Command line for a C++ automatic builder
 """
+__author__ = 'Mauro Bruni'
 
-from compile import compile
+from core import build
 
 def main(*argv):
     if len(argv) >= 2:
         try:
-            compile(argv[1])
+            build(argv[1])
         except IOError, e:
             print e
     else:

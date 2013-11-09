@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Compilation module
+Core module for the automatic C++ builder
 
 TODO:
 * Comprobar que el compilador terminó correctamente
@@ -18,7 +18,7 @@ source_exts = ['.cpp', '.cc', '.c']
 compile_extra = ''
 link_extra = ''
 
-PATH = ['.']
+PATH = []
 
 
 class File(object):
@@ -147,9 +147,9 @@ def dependencies(actual):
     return actual.includes, actual.sources
 
 
-def compile(source_name):
+def build(source_name):
     """
-    Automatic compile de *source_name* file and its dependencies
+    Automatic build de *source_name* file and its dependencies
     *source_name* is a .cpp/.cc source file name
     """
     actual = File(source_name)

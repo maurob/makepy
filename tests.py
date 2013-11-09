@@ -1,14 +1,16 @@
 import unittest
-import compile
+import core
+from core import (find_file, File, find_includes, find_related_sources, 
+                   dependencies)
 
-class CompileTest(unittest.TestCase):
+class CoreTest(unittest.TestCase):
 
     def setUp(self):
-        compile.PATH = ['.']
+        core.PATH = []
     
     def test_File(self):
         """ Test File class """
-        f = compile.File('../test/../test/main.cpp')
+        f = File('../test/../test/main.cpp')
         self.assertEqual(str(f), '../test/main.cpp')
         self.assertEqual(f.full, '../test/main.cpp')
         self.assertEqual(f.path, '../test')
@@ -18,34 +20,36 @@ class CompileTest(unittest.TestCase):
         self.assertEqual(f.name_ext, 'main.cpp')
 
     def test_find_file(self):
-        from compile import PATH, find_file, File
-        PATH.append('test')
-        PATH.append('test/sub')
+        core.PATH.append('test')
+        core.PATH.append('test/sub')
         self.assertEqual(find_file(File('a.txt')).full, 'test/a.txt')
         self.assertEqual(find_file(File('b.txt')).full, 'test/sub/b.txt')
 
     def test_find_file_path(self):
-        from compile import find_file, File
         self.assertEqual(find_file(File('a.txt'), 'test').full, 'test/a.txt')
         self.assertRaises(IOError, find_file, File('notfound.txt'))
 
     def test_find_includes(self):
-        from compile import find_includes, File
         actual = File('test/main.cpp')
         includes = find_includes(actual)
         inc = includes[0]
         self.assertEqual(inc.name_ext, 'pepe.h')
 
     def test_find_related_sources(self):
-        from compile import find_related_sources, File
         includes = [File(f) for f in ['test/pepe.h', 'test/otro.h']]
         sources = find_related_sources(includes)
         self.assertEqual(len(sources), 1)
         self.assertEqual(sources[0].full, 'test/pepe.cpp')
         
     def test_dependencies(self):
-        from compile import dependencies, File
-        print dependencies(File('test/main.cpp'))
+        f = File('test/main.cpp')
+        dependencies(f)
+        self.assertEqual(len(f.includes), 2)
+        self.assertEqual(len(f.sources), 1)
+        self.assertEqual(f.includes[0].full, 'test/pepe.h')
+        self.assertEqual(f.includes[1].full, 'test/otro.h')
+        self.assertEqual(f.sources[0].full, 'test/pepe.cpp')
+
 
 if __name__ == '__main__':
     unittest.main()
