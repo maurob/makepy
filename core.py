@@ -11,6 +11,7 @@ __author__ = 'Mauro Bruni'
 import os
 from os import system
 import re
+import time
 
 CXX = 'g++'
 source_exts = ['.cpp', '.cc', '.c']
@@ -44,6 +45,9 @@ class File(object):
     def __len__(self):
         return len(self.full)
 
+    def getmtime(self):
+        return os.path.getmtime(self.full)
+
 
 def noempty(it):
     """ Return a list with only the elements from *it* with a len > 0 """
@@ -55,9 +59,10 @@ def sjoin(*args):
     return ' '.join(noempty(args))
 
 
-def compile_cmd(path_name, extra=''):
+def compile_cmd(file, extra=''):
     """ Return the command line for creating a `.o` from a `.cpp` """
-    return sjoin(CXX, compile_extra, extra, '-c', path_name)
+    return sjoin(CXX, compile_extra, extra, '-o', file.path_name+'.o', 
+                 '-c', file.full)
 
 
 def link_cmd(path_name, objs=[], extra=''):
@@ -135,6 +140,7 @@ def find_related_sources(includes, exts=source_exts):
 visiting_files = []
 
 def dependencies(actual):
+    print 'dependecies', actual
     actual.includes = find_includes(actual)
 
     if actual.ext in header_exts:
@@ -168,16 +174,44 @@ def build(source_name):
 
     print
 
+    errors = open('errors', 'w')
+
     if len(sources) > 0: # Compile and link
+        any_change = False
         #sources.append(actual)
         objs = []
         for source in sources + [actual]:
             obj = source.path_name + '.o'
             objs.append(obj)
-            print compile_cmd(source.full)
-            print 'Sensibility:', [source] + source.includes + source.sources
+            obj_file = File(obj)
+            print obj_file
+            try:
+                obj_file_mtime = obj_file.getmtime()
+            except OSError:
+                obj_file_mtime = 0
+
+            sensibility = [source] + source.includes + source.sources
+            for file in sensibility:
+                try:
+                    print file.getmtime(), obj_file_mtime
+                    if file.getmtime() > obj_file_mtime:
+                        cmd = compile_cmd(file)
+                        print cmd
+                        any_change = True
+                        #e = os.system(cmd)
+                        #if e:
+                        #    errors.write('[{0}] {1}'.format(e, file))
+                except IOError:
+                    pass
             print
-        print link_cmd(source.path_name, objs)
+        if any_change:
+            cmd = link_cmd(source.path_name, objs)
+            print cmd
+            #e = os.system(cmd) 
+            #if e:
+            #    errors.write('Link [{0}] {1}'.format(e, file))
+        else:
+            print 'No need for rebuild (no changes)'
 
     else: # Compile into the executable
         print link_cmd(actual.path_name, [actual.full])

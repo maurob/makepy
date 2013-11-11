@@ -2,6 +2,7 @@ import unittest
 import core
 from core import (find_file, File, find_includes, find_related_sources, 
                    dependencies)
+import multicore
 
 class CoreTest(unittest.TestCase):
 
@@ -44,12 +45,23 @@ class CoreTest(unittest.TestCase):
     def test_dependencies(self):
         f = File('test/main.cpp')
         dependencies(f)
+        print f
+        print f.includes
+        print f.sources
         self.assertEqual(len(f.includes), 2)
         self.assertEqual(len(f.sources), 1)
         self.assertEqual(f.includes[0].full, 'test/pepe.h')
         self.assertEqual(f.includes[1].full, 'test/otro.h')
         self.assertEqual(f.sources[0].full, 'test/pepe.cpp')
 
+
+class MulticoreTest(unittest.TestCase):
+
+    def test_one_process(self):
+        m = multicore.Multicore()
+        print len(m)
+        #m.shell('ls', stdout='pepe.stdout')
+        #m.wait_all()
 
 
 if __name__ == '__main__':
