@@ -174,9 +174,9 @@ def build(source_name):
         for source in sources + [actual]:
             obj = source.path_name + '.o'
             objs.append(obj)
-            compile_cmd(source.full)
-            #print 'Sensibility:', [source] + source.includes + source.sources
-            #print
+            print compile_cmd(source.full)
+            print 'Sensibility:', [source] + source.includes + source.sources
+            print
         link_cmd(source.path_name, objs)
 
     else: # Compile into the executable
