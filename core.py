@@ -14,11 +14,13 @@ import re
 
 CXX = 'g++'
 source_exts = ['.cpp', '.cc', '.c']
+header_exts = ['.h', '.hpp']
 
 compile_extra = ''
 link_extra = ''
 
-PATH = []
+PATH = [
+    ]
 
 
 class File(object):
@@ -30,12 +32,17 @@ class File(object):
         self.name, self.ext = os.path.splitext(self.filename)
         self.path_name = os.path.join(self.path, self.name)
         self.name_ext = self.name + self.ext
+        self.includes = []
+        self.sources = []
 
     def __repr__(self):
         return self.full
 
     def __eq__(self, other):
         return self.full == other.full
+
+    def __len__(self):
+        return len(self.full)
 
 
 def noempty(it):
@@ -107,7 +114,7 @@ def find_includes(actual):
             except IndexError:
                 pass
             except IOError, e:
-                raise IOError(e + 'in {0}:{1}'.format(actual.full, n+1))
+                print str(e) + ' included from {0}:{1}'.format(actual.full, n+1)
     return includes
 
 
@@ -125,17 +132,21 @@ def find_related_sources(includes, exts=source_exts):
                 include.related_source = src
     return sources
 
+visiting_files = []
 
 def dependencies(actual):
-    try:
-        file = open(actual.full)
-    except IOError:
-        raise IOError('[Error] File not found: {0}'.format(actual))
-
     actual.includes = find_includes(actual)
-    actual.sources = find_related_sources(actual.includes)
-    if len(actual.sources) > 0:
-        for file in actual.sources + actual.includes:
+
+    if actual.ext in header_exts:
+        actual.sources = find_related_sources(actual.includes)
+    else:
+        actual.sources = []
+    
+    files = actual.includes + actual.sources
+
+    for file in files:
+        if file not in visiting_files:
+            visiting_files.append(file)
             inc, src = dependencies(file)
             for s in src:
                 if s not in actual.sources:
@@ -163,10 +174,10 @@ def build(source_name):
         for source in sources + [actual]:
             obj = source.path_name + '.o'
             objs.append(obj)
-            print compile_cmd(obj)
-            print 'Sensibility:', [source] + source.includes + source.sources
-            print
-        print link_cmd(source.path_name, objs)
+            compile_cmd(source.full)
+            #print 'Sensibility:', [source] + source.includes + source.sources
+            #print
+        link_cmd(source.path_name, objs)
 
     else: # Compile into the executable
         print link_cmd(actual.path_name, [actual.full])
