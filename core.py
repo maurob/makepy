@@ -177,7 +177,7 @@ def build(source_name):
             print compile_cmd(source.full)
             print 'Sensibility:', [source] + source.includes + source.sources
             print
-        link_cmd(source.path_name, objs)
+        print link_cmd(source.path_name, objs)
 
     else: # Compile into the executable
         print link_cmd(actual.path_name, [actual.full])
