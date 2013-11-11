@@ -51,5 +51,6 @@ class CoreTest(unittest.TestCase):
         self.assertEqual(f.sources[0].full, 'test/pepe.cpp')
 
 
+
 if __name__ == '__main__':
     unittest.main()
