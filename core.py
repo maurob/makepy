@@ -73,7 +73,7 @@ class File(object):
         except OSError:
             return True
 
-        for file in [self] + recursive_includes():
+        for file in [self] + self.recursive_includes():
             if file.getmtime() > obj_file_mtime:
                 return True
         return False
@@ -84,11 +84,6 @@ class File(object):
         """
         return find_related_sources(self.recursive_includes())
 
-    def compile(self):
-        """
-        Execute the compilation command to generate the `.o` file
-        """
-        print compile_cmd(self)
 
 def noempty(it):
     """ Return a list with only the elements from *it* with a len > 0 """
@@ -190,16 +185,22 @@ def build(source_name):
     any_new_obj = False
     objs = []
 
+    from process import MultiProcess
+    compilation_process = MultiProcess()
+
     for source in [main_source] + main_source.related_sources():
         obj_file = source.to_obj()
         objs.append(obj_file.full)
         
         if source.need_to_by_compiled():
-            source.compile()
+            compilation_process.add(compile_cmd(source))
             any_new_obj = True
 
     if any_new_obj:
-        print link_cmd(main_source.path_name, objs)
+        compilation_process.wait()
+        link_process = MultiProcess()
+        link_process.add(link_cmd(main_source.path_name, objs))
+        link_process.wait()
     else:
         print 'No need for rebuild (no changes)'
     
