@@ -33,8 +33,6 @@ class File(object):
         self.name, self.ext = os.path.splitext(self.filename)
         self.path_name = os.path.join(self.path, self.name)
         self.name_ext = self.name + self.ext
-        self.includes = []
-        self.sources = []
 
     def __repr__(self):
         return self.full
@@ -48,6 +46,49 @@ class File(object):
     def getmtime(self):
         return os.path.getmtime(self.full)
 
+    def to_obj(self):
+        """
+        Return a `.o` version of this file
+        """
+        return File(self.path_name + '.o')
+
+    def recursive_includes(self):
+        """
+        Recursively find the include files starting in this file
+        """
+        includes = find_includes(self)
+        for include_file in includes:
+            includes += include_file.recursive_includes()
+        return includes
+
+    def need_to_by_compiled(self):
+        """
+        Return True if this file or any included file from it has a newer
+        modification time than its related obj file or if the latter
+        doesn't exists
+        """
+        obj_file = self.to_obj()
+        try:
+            obj_file_mtime = obj_file.getmtime()
+        except OSError:
+            return True
+
+        for file in [self] + recursive_includes():
+            if file.getmtime() > obj_file_mtime:
+                return True
+        return False
+
+    def related_sources(self):
+        """
+        Return a list of source files related to the included files
+        """
+        return find_related_sources(self.recursive_includes())
+
+    def compile(self):
+        """
+        Execute the compilation command to generate the `.o` file
+        """
+        print compile_cmd(self)
 
 def noempty(it):
     """ Return a list with only the elements from *it* with a len > 0 """
@@ -67,7 +108,8 @@ def compile_cmd(file, extra=''):
 
 def link_cmd(path_name, objs=[], extra=''):
     """
-    Return the command line for creating a executable from the `.o` file list
+    Return the command line for creating a executable from the `.o` file
+    list
     """
     return sjoin(CXX, link_extra, extra, '-o', path_name, *objs)
 
@@ -88,8 +130,8 @@ def comment_remover(text):
 
 def find_file(file, path='.'):
     """
-    Find the first ocurrence of *file* starting the search in path and then
-    in each path in PATH list.
+    Find the first ocurrence of *file* starting the search in path and
+    then in each path in PATH list.
     Return the new path in a File instance
     *file* is also a File instance
     """
@@ -99,10 +141,10 @@ def find_file(file, path='.'):
             return File(path_file)
     raise IOError('[Error] file not found in PATH: '+file.full)
     
-
 def find_includes(actual):
     """
-    Return the list of included files in *file* and the line number where finded 
+    Return the list of included files in *file* and the line number where
+    finded 
     *file* must be a readable Python file object
     """
     includes = []
@@ -119,7 +161,8 @@ def find_includes(actual):
             except IndexError:
                 pass
             except IOError, e:
-                print str(e) + ' included from {0}:{1}'.format(actual.full, n+1)
+                print str(e) + ' included from {0}:{1}'.format(actual.full,
+                                                               n+1)
     return includes
 
 
@@ -137,85 +180,27 @@ def find_related_sources(includes, exts=source_exts):
                 include.related_source = src
     return sources
 
-visiting_files = []
-
-def dependencies(actual):
-    print 'dependecies', actual
-    actual.includes = find_includes(actual)
-
-    if actual.ext in header_exts:
-        actual.sources = find_related_sources(actual.includes)
-    else:
-        actual.sources = []
-    
-    files = actual.includes + actual.sources
-
-    for file in files:
-        if file not in visiting_files:
-            visiting_files.append(file)
-            inc, src = dependencies(file)
-            for s in src:
-                if s not in actual.sources:
-                    actual.sources.append(s)
-            for i in inc: 
-                if i not in actual.includes:
-                    actual.includes.append(i)
-    
-    return actual.includes, actual.sources
-
 
 def build(source_name):
     """
     Automatic build de *source_name* file and its dependencies
     *source_name* is a .cpp/.cc source file name
     """
-    actual = File(source_name)
-    includes, sources = dependencies(actual)
+    main_source = File(source_name)
+    any_new_obj = False
+    objs = []
 
-    print
+    for source in [main_source] + main_source.related_sources():
+        obj_file = source.to_obj()
+        objs.append(obj_file.full)
+        
+        if source.need_to_by_compiled():
+            source.compile()
+            any_new_obj = True
 
-    errors = open('errors', 'w')
-
-    if len(sources) > 0: # Compile and link
-        any_change = False
-        #sources.append(actual)
-        objs = []
-        for source in sources + [actual]:
-            obj = source.path_name + '.o'
-            objs.append(obj)
-            obj_file = File(obj)
-            print obj_file
-            try:
-                obj_file_mtime = obj_file.getmtime()
-            except OSError:
-                obj_file_mtime = 0
-
-            sensibility = [source] + source.includes + source.sources
-            for file in sensibility:
-                try:
-                    print file.getmtime(), obj_file_mtime
-                    if file.getmtime() > obj_file_mtime:
-                        cmd = compile_cmd(file)
-                        print cmd
-                        any_change = True
-                        #e = os.system(cmd)
-                        #if e:
-                        #    errors.write('[{0}] {1}'.format(e, file))
-                except IOError:
-                    pass
-            print
-        if any_change:
-            cmd = link_cmd(source.path_name, objs)
-            print cmd
-            #e = os.system(cmd) 
-            #if e:
-            #    errors.write('Link [{0}] {1}'.format(e, file))
-        else:
-            print 'No need for rebuild (no changes)'
-
-    else: # Compile into the executable
-        print link_cmd(actual.path_name, [actual.full])
-        print 'Sensibility:', [actual] + actual.includes + actual.sources
-        print
+    if any_new_obj:
+        print link_cmd(main_source.path_name, objs)
+    else:
+        print 'No need for rebuild (no changes)'
     
     
